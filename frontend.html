@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Friday Assistant</title>
+    <!-- Google Font: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-mbkBd5Ge7s8QDJVc+nRBD3GKjqNsG9hs2jS2YLEKmlZWFAP7C1AqRQzyYSm6kI6hXFxiB3RR/d3k5xn5YgLYw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <style>
+        /* CSS for the minimalist dark-mode design and responsive layout */
+        :root {
+            --bg-color: #1a1a2e;
+            --text-color: #e0e0ef;
+            --primary-color: #007bff;
+            --secondary-color: #4b89dc;
+            --card-bg: #2a2a44;
+            --border-radius: 12px;
+            --font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            flex-direction: column;
+            overflow: hidden;
+            text-align: center;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 800px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            height: 90vh;
+            padding: 20px;
+        }
+
+        /* --- Assistant's Wave Visualizer --- */
+        #wave-container {
+            flex-grow: 1;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #wave-canvas {
+            width: 100%;
+            height: 200px;
+            opacity: 0.7;
+        }
+
+        /* --- Transcription Display --- */
+        #transcription-display {
+            width: 100%;
+            height: 150px;
+            margin: 20px 0;
+            padding: 15px;
+            background-color: var(--card-bg);
+            border-radius: var(--border-radius);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            overflow-y: auto;
+            text-align: left;
+            font-size: 1rem;
+            line-height: 1.6;
+        }
+        
+        #transcription-display::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        #transcription-display::-webkit-scrollbar-track {
+            background: #333;
+            border-radius: 10px;
+        }
+        
+        #transcription-display::-webkit-scrollbar-thumb {
+            background: var(--primary-color);
+            border-radius: 10px;
+        }
+
+        /* --- User Input Area --- */
+        .input-area {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            background-color: var(--card-bg);
+            padding: 10px;
+            border-radius: var(--border-radius);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        #text-input {
+            flex-grow: 1;
+            padding: 12px;
+            border: none;
+            background: #3a3a5a;
+            color: var(--text-color);
+            border-radius: 8px;
+            font-size: 1rem;
+            outline: none;
+        }
+
+        .mic-button, .send-button {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: transform 0.2s, background-color 0.2s;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .mic-button {
+            background-color: var(--primary-color);
+        }
+        
+        .mic-button i {
+            color: var(--text-color);
+            font-size: 1.5rem;
+        }
+        
+        .mic-button.listening {
+            background-color: #dc3545; /* Red for 'listening' state */
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(0, 123, 255, 0.7); }
+            70% { box-shadow: 0 0 0 15px rgba(0, 123, 255, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(0, 123, 255, 0); }
+        }
+
+        .send-button {
+            background-color: var(--secondary-color);
+        }
+        
+        .send-button svg {
+            fill: var(--text-color);
+            width: 24px;
+            height: 24px;
+        }
+        
+        /* --- Flash Card (Error Modal) --- */
+        .flash-card {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: #c93b3b;
+            color: #fff;
+            padding: 20px;
+            border-radius: var(--border-radius);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
+            max-width: 400px;
+            z-index: 1000;
+            display: none; /* Hidden by default */
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        
+        .flash-card.show {
+            display: block;
+        }
+
+        .flash-card .close-btn {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #fff;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translate(-50%, -60%); }
+            to { opacity: 1; transform: translate(-50%, -50%); }
+        }
+
+        /* --- Media Queries for Responsiveness --- */
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+                height: 95vh;
+            }
+            .input-area {
+                flex-direction: row;
+                justify-content: space-between;
+                align-items: center;
+                gap: 10px;
+            }
+            #text-input {
+                padding: 10px;
+            }
+            #transcription-display {
+                height: 120px;
+                font-size: 0.9rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- Main title of the app -->
+        <h1 style="color: var(--primary-color);">Friday</h1>
+
+        <!-- Assistant's voice visualizer (Canvas) -->
+        <div id="wave-container">
+            <canvas id="wave-canvas"></canvas>
+        </div>
+        
+        <!-- Transcription Display Area -->
+        <div id="transcription-display">
+            <p><strong>Friday:</strong> नमस्ते, मैं फ्राइडे हूँ, आपकी कैसे मदद कर सकती हूँ?</p>
+        </div>
+
+        <!-- User Input Area -->
+        <div class="input-area">
+            <input type="text" id="text-input" placeholder="अपना प्रश्न यहाँ टाइप करें...">
+            <button class="send-button" id="send-btn" title="Send text message">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-send-horizontal">
+                    <path d="m3 3 3 9-3 9 19-9Z" />
+                    <path d="M6 12h16" />
+                </svg>
+            </button>
+            <button class="mic-button" id="mic-btn" title="Toggle voice input">
+                <i class="fa-solid fa-microphone"></i>
+            </button>
+        </div>
+    </div>
+    
+    <!-- Error Flash Card (Modal) -->
+    <div class="flash-card" id="error-card">
+        <span class="close-btn" onclick="closeFlashCard()">×</span>
+        <p id="error-message"></p>
+    </div>
+
+    <script>
+        // JavaScript for UI functionality and placeholder logic
+        const micBtn = document.getElementById('mic-btn');
+        const textInput = document.getElementById('text-input');
+        const sendBtn = document.getElementById('send-btn');
+        const transcriptionDisplay = document.getElementById('transcription-display');
+        const errorCard = document.getElementById('error-card');
+        const errorMessage = document.getElementById('error-message');
+        
+        let isListening = false;
+        
+        // Canvas and Audio Visualization
+        const canvas = document.getElementById('wave-canvas');
+        const ctx = canvas.getContext('2d');
+        let animationFrameId;
+
+        // Set canvas dimensions with devicePixelRatio for better resolution
+        function setupCanvas() {
+            const devicePixelRatio = window.devicePixelRatio || 1;
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width * devicePixelRatio;
+            canvas.height = rect.height * devicePixelRatio;
+            ctx.scale(devicePixelRatio, devicePixelRatio);
+        }
+        
+        window.addEventListener('resize', setupCanvas);
+        setupCanvas();
+
+        // Function to draw a simple wave animation
+        function drawWave(volume) {
+            const width = canvas.width / (window.devicePixelRatio || 1);
+            const height = canvas.height / (window.devicePixelRatio || 1);
+            const centerY = height / 2;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            ctx.strokeStyle = '#007bff';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            
+            // Adjust wave properties based on volume
+            const amplitude = 50 * volume;
+            const frequency = 0.05 + volume * 0.02;
+
+            ctx.moveTo(0, centerY);
+            for (let i = 0; i < width; i++) {
+                const y = centerY + amplitude * Math.sin(i * frequency + Date.now() * 0.005);
+                ctx.lineTo(i, y);
+            }
+            ctx.stroke();
+
+            // Loop the animation
+            animationFrameId = requestAnimationFrame(() => drawWave(volume));
+        }
+
+        // Simulating audio input with a random volume for demonstration
+        function simulateAudio() {
+            const randomVolume = 0.2 + Math.random() * 0.8;
+            drawWave(randomVolume);
+        }
+
+        // Start the wave animation on window load.
+        window.onload = function () {
+            // Placeholder: This will be replaced by actual LiveKit audio data.
+            simulateAudio(); 
+        }
+
+        // Event listener for the microphone button
+        micBtn.addEventListener('click', () => {
+            isListening = !isListening;
+            if (isListening) {
+                // Change UI to 'listening' state
+                micBtn.classList.add('listening');
+                micBtn.innerHTML = '<i class="fa-solid fa-square"></i>'; // Stop icon
+                console.log('Listening for voice input...');
+                // Placeholder for LiveKit audio stream start
+                // Your livekit-client code to start the microphone track would go here.
+            } else {
+                // Change UI to 'idle' state
+                micBtn.classList.remove('listening');
+                micBtn.innerHTML = '<i class="fa-solid fa-microphone"></i>';
+                console.log('Stopped listening.');
+                // Placeholder for LiveKit audio stream stop
+                // Your livekit-client code to stop the microphone track would go here.
+            }
+        });
+
+        // Event listener for the send button
+        sendBtn.addEventListener('click', () => {
+            handleTextSubmit();
+        });
+
+        // Event listener for the Enter key in the text input field
+        textInput.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                handleTextSubmit();
+            }
+        });
+
+        // Function to handle text input submission
+        function handleTextSubmit() {
+            const text = textInput.value.trim();
+            if (text) {
+                addTranscriptionMessage('You', text);
+                textInput.value = '';
+                console.log('Text sent:', text);
+                // Placeholder for sending text via LiveKit data channel
+                // Your livekit-client code to send a data message would go here.
+                
+                // Simulate a response from Friday (for demo purposes)
+                setTimeout(() => {
+                    // This would be replaced by actual responses from your LiveKit agent
+                    const responses = [
+                        "जी हाँ, मैं आपकी मदद कर सकती हूँ।",
+                        "मैं आपके लिए यह जानकारी खोज रही हूँ।",
+                        "क्षमा करें, मुझे वह समझ नहीं आया। क्या आप फिर से बता सकते हैं?",
+                        "अभी भोपाल में तापमान 24 डिग्री सेल्सियस है।",
+                        "आपका स्वागत है! और कुछ पूछना चाहेंगे?",
+                    ];
+                    const randomResponse = responses[Math.floor(Math.random() * responses.length)];
+                    addTranscriptionMessage('Friday', randomResponse);
+                }, 1000);
+            }
+        }
+        
+        // Function to add a new message to the transcription display
+        function addTranscriptionMessage(sender, message) {
+            const p = document.createElement('p');
+            p.innerHTML = `<strong>${sender}:</strong> ${message}`;
+            transcriptionDisplay.appendChild(p);
+            transcriptionDisplay.scrollTop = transcriptionDisplay.scrollHeight;
+        }
+
+        // Function to show an error flash card
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorCard.classList.add('show');
+        }
+
+        // Function to close the error flash card
+        function closeFlashCard() {
+            errorCard.classList.remove('show');
+        }
+    </script>
+</body>
+</html>
